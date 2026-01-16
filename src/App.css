@@ -79,12 +79,14 @@ nav {
   opacity: 0.5;
   height: 1px;
 }
+
 nav a {
   margin-right: 10px;
   text-decoration: none;
   color: #fff;
   opacity: 0.5;
 }
+
 main {
   padding: 20px;
   color: #fff;
@@ -411,7 +413,7 @@ form {
   overflow: hidden;
 }
 
-.memory-card-toggle:focus-visible + .memory-card-inner {
+.memory-card-toggle:focus-visible+.memory-card-inner {
   outline: 3px solid #39ff14;
   outline-offset: 4px;
 }
@@ -425,7 +427,7 @@ form {
   transition: transform 0.6s ease;
 }
 
-.memory-card-toggle:checked + .memory-card-inner {
+.memory-card-toggle:checked+.memory-card-inner {
   transform: rotateY(180deg);
 }
 
@@ -462,6 +464,18 @@ form {
   border: 0;
 }
 
+/* Style pour les cartes matchées */
+.memory-card--matched {
+  pointer-events: none;
+  opacity: 0.6;
+  transform: scale(0.95);
+  box-shadow: 0 0 20px rgba(57, 255, 20, 0.8);
+}
+
+.memory-card--matched .memory-card-inner {
+  transform: rotateY(180deg);
+}
+
 .flash {
   position: fixed;
   top: 5%;
@@ -494,4 +508,3 @@ form {
   visibility: hidden;
   transform: translate(-50%, -50%) scale(0.95);
 }
-
