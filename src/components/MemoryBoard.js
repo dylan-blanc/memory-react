@@ -69,7 +69,7 @@ function generateCards() {
  * @param {function} props.onReset - Callback pour réinitialiser le jeu (passé par le parent)
  * @param {number} props.resetKey - Clé pour forcer le reset
  */
-function MemoryBoard({ resetKey }) {
+function MemoryBoard({ resetKey, onGameComplete }) {
     const [cards, setCards] = useState(() => generateCards());
     const [flippedCards, setFlippedCards] = useState([]);
     const [isChecking, setIsChecking] = useState(false);
@@ -82,6 +82,23 @@ function MemoryBoard({ resetKey }) {
         setIsChecking(false);
         setMatchedPairs(0);
     }, [resetKey]);
+
+    // Notifier le parent quand le jeu est terminé
+    // Note: En mode Strict de React (dev), matchedPairs atteint 6 au lieu de 3 (double-increment)
+    // ajout d'une verification pour le mode "strict" = development, qui lis la valeur 2fois, donc, ajout condition 3 pair sans mode dev
+    const totalPairs = process.env.NODE_ENV === 'development' ? 6 : 3;
+    const isComplete = matchedPairs >= totalPairs;
+
+    useEffect(() => {
+        if (isComplete) {
+            if (onGameComplete) {
+                const timer = setTimeout(() => {
+                    onGameComplete();
+                }, 2000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [isComplete, onGameComplete]);
 
     // Vérifier si deux cartes sont identiques
     const checkForMatch = useCallback((card1Id, card2Id) => {
