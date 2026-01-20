@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './Card';
 
-// Liste de toutes les images disponibles (12 cartes)
-const ALL_CARD_IMAGES = [
+// === LISTE DES IMAGES ===
+const IMAGES = [
     '/images/TestCarte1.png',
     '/images/TestCarte2.png',
     '/images/TestCarte3.png',
@@ -17,149 +17,107 @@ const ALL_CARD_IMAGES = [
     '/images/TestCarte12.png',
 ];
 
-/**
- * Fonction de mélange (Fisher-Yates shuffle)
- */
-function shuffleArray(array) {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
+// === FONCTION: Mélanger un tableau ===
+function melanger(tableau) {
+    const copie = [...tableau];
+    for (let i = copie.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [copie[i], copie[j]] = [copie[j], copie[i]];
     }
-    return shuffled;
+    return copie;
 }
 
-/**
- * Génère les cartes pour le jeu (6 cartes = 3 paires)
- * Sélectionne 3 images aléatoires et les duplique
- */
-function generateCards() {
-    // Mélanger toutes les images et en prendre 3
-    const shuffledImages = shuffleArray(ALL_CARD_IMAGES);
-    const selectedImages = shuffledImages.slice(0, 3);
+// === FONCTION: Créer les cartes du jeu ===
+function creerCartes() {
+    // Prendre 3 images au hasard
+    const imagesChoisies = melanger(IMAGES).slice(0, 3);
 
-    // Créer les paires (chaque image apparaît 2 fois)
-    const cardPairs = [];
-    selectedImages.forEach((image, index) => {
-        // Deux cartes avec la même image
-        cardPairs.push({
-            id: index * 2,
-            pairId: index,
-            image: image,
-            isFlipped: false,
-            isMatched: false,
-        });
-        cardPairs.push({
-            id: index * 2 + 1,
-            pairId: index,
-            image: image,
-            isFlipped: false,
-            isMatched: false,
-        });
+    // Créer 2 cartes par image (= 6 cartes, 3 paires)
+    const cartes = [];
+    imagesChoisies.forEach((image, index) => {
+        cartes.push({ id: index * 2, pairId: index, image, retournee: false, trouvee: false });
+        cartes.push({ id: index * 2 + 1, pairId: index, image, retournee: false, trouvee: false });
     });
 
-    // Mélanger les cartes
-    return shuffleArray(cardPairs);
+    return melanger(cartes);
 }
 
-/**
- * Composant MemoryBoard - Gère la grille de cartes Memory
- * 
- * @param {Object} props
- * @param {function} props.onReset - Callback pour réinitialiser le jeu (passé par le parent)
- * @param {number} props.resetKey - Clé pour forcer le reset
- */
+// === COMPOSANT PRINCIPAL ===
 function MemoryBoard({ resetKey, onGameComplete }) {
-    const [cards, setCards] = useState(() => generateCards());
-    const [flippedCards, setFlippedCards] = useState([]);
-    const [isChecking, setIsChecking] = useState(false);
-    const [matchedPairs, setMatchedPairs] = useState(0);
+    const [cartes, setCartes] = useState(creerCartes);
+    const [selection, setSelection] = useState([]);     // Les 2 cartes cliquées
+    const [bloque, setBloque] = useState(false);        // Bloque les clics pendant la vérif
+    const [paires, setPaires] = useState(0);            // Nombre de paires trouvées
 
-    // Réinitialiser le jeu quand resetKey change
+    // Reset quand resetKey change
     useEffect(() => {
-        setCards(generateCards());
-        setFlippedCards([]);
-        setIsChecking(false);
-        setMatchedPairs(0);
+        setCartes(creerCartes());
+        setSelection([]);
+        setBloque(false);
+        setPaires(0);
     }, [resetKey]);
 
-    // Notifier le parent quand le jeu est terminé
-    // Note: En mode Strict de React (dev), matchedPairs atteint 6 au lieu de 3 (double-increment)
-    // ajout d'une verification pour le mode "strict" = development, qui lis la valeur 2fois, donc, ajout condition 3 pair sans mode dev
-    const totalPairs = process.env.NODE_ENV === 'development' ? 6 : 3;
-    const isComplete = matchedPairs >= totalPairs;
-
+    // Victoire: 3 paires trouvées
     useEffect(() => {
-        if (isComplete) {
-            if (onGameComplete) {
-                const timer = setTimeout(() => {
-                    onGameComplete();
-                }, 2000);
-                return () => clearTimeout(timer);
-            }
+        if (paires === 3 && onGameComplete) {
+            setTimeout(onGameComplete, 1500);
         }
-    }, [isComplete, onGameComplete]);
+    }, [paires, onGameComplete]);
 
-    // Vérifier si deux cartes sont identiques
-    const checkForMatch = useCallback((card1Id, card2Id) => {
-        setIsChecking(true);
-
-        setTimeout(() => {
-            setCards(prevCards => {
-                const card1 = prevCards.find(c => c.id === card1Id);
-                const card2 = prevCards.find(c => c.id === card2Id);
-
-                if (card1.pairId === card2.pairId) {
-                    // C'est une paire !
-                    setMatchedPairs(prev => prev + 1);
-                    return prevCards.map(card =>
-                        card.id === card1Id || card.id === card2Id
-                            ? { ...card, isMatched: true, isFlipped: false }
-                            : card
-                    );
-                } else {
-                    // Pas une paire, retourner les cartes
-                    return prevCards.map(card =>
-                        card.id === card1Id || card.id === card2Id
-                            ? { ...card, isFlipped: false }
-                            : card
-                    );
-                }
-            });
-
-            setFlippedCards([]);
-            setIsChecking(false);
-        }, 1000);
-    }, []);
-
-    // Gérer le clic sur une carte
-    const handleCardClick = useCallback((cardId) => {
-        if (isChecking) return;
-        if (flippedCards.length >= 2) return;
-        if (flippedCards.includes(cardId)) return;
+    // === CLIC SUR UNE CARTE ===
+    function cliquerCarte(id) {
+        if (bloque) return;
+        if (selection.length >= 2) return;
+        if (selection.includes(id)) return;
 
         // Retourner la carte
-        setCards(prevCards =>
-            prevCards.map(card =>
-                card.id === cardId ? { ...card, isFlipped: true } : card
-            )
-        );
+        setCartes(prev => prev.map(c =>
+            c.id === id ? { ...c, retournee: true } : c
+        ));
 
-        const newFlippedCards = [...flippedCards, cardId];
-        setFlippedCards(newFlippedCards);
+        const nouvelleSelection = [...selection, id];
+        setSelection(nouvelleSelection);
 
-        // Si deux cartes sont retournées, vérifier la correspondance
-        if (newFlippedCards.length === 2) {
-            checkForMatch(newFlippedCards[0], newFlippedCards[1]);
+        // Si 2 cartes sélectionnées → vérifier
+        if (nouvelleSelection.length === 2) {
+            verifierPaire(nouvelleSelection[0], nouvelleSelection[1]);
         }
-    }, [flippedCards, isChecking, checkForMatch]);
+    }
 
-    // Vérifier si le jeu est terminé
-    const isGameComplete = matchedPairs === 3;
+    // === VÉRIFIER SI C'EST UNE PAIRE ===
+    function verifierPaire(id1, id2) {
+        setBloque(true);
 
+        setTimeout(() => {
+            const carte1 = cartes.find(c => c.id === id1);
+            const carte2 = cartes.find(c => c.id === id2);
+
+            if (carte1.pairId === carte2.pairId) {
+                // PAIRE TROUVÉE !
+                setPaires(p => p + 1);
+                setCartes(prev => prev.map(c =>
+                    c.id === id1 || c.id === id2
+                        ? { ...c, trouvee: true, retournee: false }
+                        : c
+                ));
+            } else {
+                // Pas une paire → retourner face cachée
+                setCartes(prev => prev.map(c =>
+                    c.id === id1 || c.id === id2
+                        ? { ...c, retournee: false }
+                        : c
+                ));
+            }
+
+            setSelection([]);
+            setBloque(false);
+        }, 1000);
+    }
+
+    // === AFFICHAGE ===
     return (
         <div>
-            {isGameComplete && (
+            {paires === 3 && (
                 <div style={{
                     textAlign: 'center',
                     color: '#39ff14',
@@ -167,22 +125,19 @@ function MemoryBoard({ resetKey, onGameComplete }) {
                     marginBottom: '20px',
                     textShadow: '0 0 10px rgba(57, 255, 20, 0.8)'
                 }}>
-                    🎉 Félicitations ! Vous avez trouvé toutes les paires ! 🎉
+                    🎉 Vous avez trouvé toutes les paires !
                 </div>
             )}
-            <div
-                className="memory-board memory-board--facile"
-                data-total-pairs="3"
-                data-difficulty="facile"
-            >
-                {cards.map(card => (
+
+            <div className="memory-board memory-board--facile">
+                {cartes.map(carte => (
                     <Card
-                        key={card.id}
-                        id={card.id}
-                        image={card.image}
-                        isFlipped={card.isFlipped}
-                        isMatched={card.isMatched}
-                        onClick={handleCardClick}
+                        key={carte.id}
+                        id={carte.id}
+                        image={carte.image}
+                        isFlipped={carte.retournee}
+                        isMatched={carte.trouvee}
+                        onClick={cliquerCarte}
                     />
                 ))}
             </div>

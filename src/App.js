@@ -47,9 +47,9 @@ function App() {
       {/* Composant Title qui gère l'affichage du leaderboard et du bouton démarrer */}
       <Title isGameStarted={isGameStarted} onStartGame={handleStartGame}>
         <section className="leaderboard">
-          <h2 className="leaderboard-title">Leaderboard</h2>
+          <h2 className="leaderboard-title">Memory-React</h2>
 
-          <div className="leaderboard-top3">
+          {/* <div className="leaderboard-top3">
             <table border="0" className="score-table-Top3">
               <thead>
                 <tr>
@@ -86,7 +86,7 @@ function App() {
                 </tr>
               </tbody>
             </table>
-          </div>
+          </div> */}
         </section>
       </Title>
 
@@ -94,7 +94,7 @@ function App() {
       {isGameStarted && (
         <section className="memory-section">
           <article className="memory-score">
-            <span
+            {/* <span
               style={{
                 position: "absolute",
                 top: "10px",
@@ -109,7 +109,7 @@ function App() {
               <span id="timer" data-duration="60">
                 01:00
               </span>
-            </span>
+            </span> */}
           </article>
 
           <h2 className="memory-title" style={{ marginTop: "-100px" }}>
@@ -130,7 +130,10 @@ function App() {
               marginTop: "20px",
             }}
           >
-            <Button className="reset-button" onClick={handleReset}>
+            <Button
+              className="reset-button"
+              onClick={handleReset}
+            >
               Reset Session
             </Button>
           </div>
